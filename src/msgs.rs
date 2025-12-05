@@ -1,13 +1,13 @@
-use komorebi_client::{Ring, Workspace};
+use komorebi_client::{State};
 use winsafe::{co::WM, msg::WndMsg};
 
-pub struct UpdateWorkspaces;
+pub struct UpdateState;
 
-impl UpdateWorkspaces {
+impl UpdateState {
     pub const ID: WM = unsafe { WM::from_raw(WM::APP.raw() + 1) };
 
-    pub fn to_wmdmsg(workspaces: Ring<Workspace>) -> WndMsg {
-        let data = Box::new(workspaces);
+    pub fn to_wmdmsg(state: State) -> WndMsg {
+        let data = Box::new(state);
         let ptr = Box::into_raw(data) as isize;
 
         WndMsg {
@@ -17,8 +17,8 @@ impl UpdateWorkspaces {
         }
     }
 
-    pub fn from_wndmsg(p: WndMsg) -> Ring<Workspace> {
-        let workspaces = unsafe { Box::from_raw(p.lparam as *mut Ring<Workspace>) };
-        *workspaces
+    pub fn from_wndmsg(p: WndMsg) -> State {
+        let state = unsafe { Box::from_raw(p.lparam as *mut State) };
+        *state
     }
 }

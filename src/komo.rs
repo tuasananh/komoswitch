@@ -2,24 +2,15 @@ use std::io::{BufReader, Read};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use anyhow::Context;
-use komorebi_client::{Notification, Ring, SocketMessage, State, SubscribeOptions, Workspace};
+use komorebi_client::{Notification, SocketMessage, State, SubscribeOptions};
 use winsafe::HWND;
 
-use crate::msgs::UpdateWorkspaces;
+use crate::msgs::UpdateState;
 
-fn workspaces_from_state(
-    state: State,
-) -> anyhow::Result<Ring<Workspace>> {
-    let monitor = state.monitors.focused().context("No focused monintor?")?;
-
-    Ok(monitor.workspaces.clone())
-}
-
-pub fn read_workspaces() -> anyhow::Result<Ring<Workspace>> {
+pub fn read_state() -> anyhow::Result<State> {
     let response = komorebi_client::send_query(&SocketMessage::State)?;
     let state: State = serde_json::from_str(&response)?;
-    workspaces_from_state(state)
+    Ok(state)
 }
 
 #[cfg(debug_assertions)]
@@ -99,16 +90,8 @@ pub fn start_listen_for_workspaces(hwnd: HWND) -> anyhow::Result<JoinHandle<()>>
                 notification.event
             );
 
-            let new_workspaces = match workspaces_from_state(notification.state) {
-                Ok(workspaces) => workspaces,
-                Err(e) => {
-                    log::error!("Failed to read workspaces from state: {e}");
-                    continue;
-                }
-            };
-
             unsafe {
-                hwnd.PostMessage(UpdateWorkspaces::to_wmdmsg(new_workspaces))
+                hwnd.PostMessage(UpdateState::to_wmdmsg(notification.state))
                     .ok();
             }
 

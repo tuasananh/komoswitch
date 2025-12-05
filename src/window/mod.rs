@@ -1,5 +1,6 @@
-use crate::{msgs::UpdateWorkspaces, window::settings::Settings};
-use komorebi_client::{DefaultLayout, Layout, Ring, SocketMessage, Workspace};
+use crate::{msgs::UpdateState, window::settings::Settings};
+use anyhow::Context;
+use komorebi_client::{DefaultLayout, Layout, Ring, SocketMessage, State, Workspace};
 use windows::Win32::UI::WindowsAndMessaging::WM_SETTINGCHANGE;
 use winsafe::{prelude::*, *};
 
@@ -10,7 +11,8 @@ seq_ids! {
 }
 pub struct Window {
     pub hwnd: HWND,
-    workspaces: Ring<Workspace>,
+    // workspaces: Ring<Workspace>,
+    state: State,
     settings: Settings,
 }
 
@@ -20,13 +22,13 @@ impl Window {
     pub fn new() -> anyhow::Result<Self> {
         Ok(Self {
             hwnd: HWND::NULL,
-            workspaces: loop {
-                let Ok(new_workspaces) = crate::komo::read_workspaces() else {
-                    log::error!("Failed to read workspaces, retrying...");
+            state: loop {
+                let Ok(new_state) = crate::komo::read_state() else {
+                    log::error!("Failed to read state, retrying...");
                     std::thread::sleep(std::time::Duration::from_secs(2));
                     continue;
                 };
-                break new_workspaces;
+                break new_state;
             },
             settings: Settings::new()?,
         })
@@ -159,7 +161,7 @@ impl Window {
                 self.handle_rbuttondown(unsafe { msg::wm::RButtonDown::from_generic_wm(p) })
             }
             co::WM::COMMAND => self.handle_command(unsafe { msg::wm::Command::from_generic_wm(p) }),
-            UpdateWorkspaces::ID => self.handle_update_workspaces(UpdateWorkspaces::from_wndmsg(p)),
+            UpdateState::ID => self.handle_update_state(UpdateState::from_wndmsg(p)),
             SETTINGCHANGED => self.handle_setting_changed(),
             co::WM::DESTROY => {
                 PostQuitMessage(0);
@@ -198,13 +200,15 @@ impl Window {
         log::debug!("Menu destroyed");
         Ok(0)
     }
+
     fn handle_lbuttondown(&mut self, p: msg::wm::RButtonDown) -> anyhow::Result<isize> {
         log::info!("Handling WM_LBUTTONDOWN message");
         let mut left = 0;
         let hdc = self.hwnd.GetDC()?;
         let rect = self.hwnd.GetClientRect()?;
-        let focused_idx = self.workspaces.focused_idx();
-        for (idx, workspace) in self.workspaces.elements().iter().enumerate() {
+        let workspaces = self.workspaces()?;
+        let focused_idx = workspaces.focused_idx();
+        for (idx, workspace) in workspaces.elements().iter().enumerate() {
             let workspace_name = workspace.name.clone().unwrap_or((idx + 1).to_string());
             let sz = hdc.GetTextExtentPoint32(&workspace_name)?;
 
@@ -240,6 +244,15 @@ impl Window {
         Ok(0)
     }
 
+    fn workspaces(&self) -> anyhow::Result<&Ring<Workspace>> {
+        let monitor = self
+            .state
+            .monitors
+            .focused()
+            .context("No focused monitor?")?;
+        Ok(&monitor.workspaces)
+    }
+
     fn paint_and_get_width(&self, hdc: &HDC, paint: bool) -> anyhow::Result<i32> {
         let _old_font = hdc.SelectObject(&self.settings.font)?;
 
@@ -260,9 +273,34 @@ impl Window {
         const BORDER_RADIUS: SIZE = SIZE { cx: 10, cy: 10 };
 
         let mut left = 0;
+        if self.state.is_paused {
+            let pause_text = "Paused";
+            let sz = hdc.GetTextExtentPoint32(&pause_text)?;
 
-        let focused_idx = self.workspaces.focused_idx();
-        for (idx, workspace) in self.workspaces.elements().iter().enumerate() {
+            if paint {
+                let text_rect = RECT {
+                    left,
+                    right: left + sz.cx + TEXT_PADDING * 2,
+                    top: rect.top + 12,
+                    bottom: rect.bottom - 12,
+                };
+
+                let focused_brush = HBRUSH::CreateSolidBrush(self.settings.colors.empty)?;
+                let _old_brush = hdc.SelectObject(&*focused_brush);
+                hdc.RoundRect(text_rect, BORDER_RADIUS)?;
+                hdc.DrawText(
+                    &pause_text,
+                    text_rect,
+                    co::DT::CENTER | co::DT::VCENTER | co::DT::SINGLELINE,
+                )?;
+            }
+
+            left += sz.cx + TEXT_PADDING * 2;
+            return Ok(left);
+        }
+        let workspaces = self.workspaces()?;
+        let focused_idx = workspaces.focused_idx();
+        for (idx, workspace) in workspaces.elements().iter().enumerate() {
             let workspace_name = workspace.name.clone().unwrap_or((idx + 1).to_string());
             let sz = hdc.GetTextExtentPoint32(&workspace_name)?;
 
@@ -302,7 +340,7 @@ impl Window {
             left += sz.cx + TEXT_PADDING * 2;
         }
 
-        if let Some(cw) = self.workspaces.focused() {
+        if let Some(cw) = workspaces.focused() {
             let mut current_state = String::new();
 
             if let Some(hwnd) = komorebi_client::WindowsApi::foreground_window().ok() {
@@ -485,11 +523,8 @@ impl Window {
 
         Ok(true)
     }
-    pub fn handle_update_workspaces(
-        &mut self,
-        workspaces: Ring<Workspace>,
-    ) -> anyhow::Result<isize> {
-        self.workspaces = workspaces;
+    pub fn handle_update_state(&mut self, state: State) -> anyhow::Result<isize> {
+        self.state = state;
         self.resize_to_fit()?;
         self.hwnd.InvalidateRect(None, true)?;
         Ok(0)
