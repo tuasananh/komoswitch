@@ -1,4 +1,4 @@
-use komorebi_client::{State};
+use komorebi_client::State;
 use winsafe::{co::WM, msg::WndMsg};
 
 pub struct UpdateState;

@@ -1,15 +1,12 @@
 #![cfg_attr(
-  all(
-    target_os = "windows",
-    not(debug_assertions),
-  ),
-  windows_subsystem = "windows"
+    all(target_os = "windows", not(debug_assertions),),
+    windows_subsystem = "windows"
 )]
 use crate::{komo::start_listen_for_workspaces, window::Window};
 
 mod komo;
-mod window;
 mod msgs;
+mod window;
 
 fn begin_execution() -> anyhow::Result<()> {
     let mut window = Window::new()?;

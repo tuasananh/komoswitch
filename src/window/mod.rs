@@ -2,7 +2,12 @@ use crate::{msgs::UpdateState, window::settings::Settings};
 use anyhow::Context;
 use komorebi_client::{DefaultLayout, Layout, Ring, SocketMessage, State, Workspace};
 use windows::Win32::UI::WindowsAndMessaging::WM_SETTINGCHANGE;
-use winsafe::{prelude::*, *};
+use winsafe::{
+    ATOM, AtomStr, COLORREF, DispatchMessage, GetMessage, HBRUSH, HDC, HINSTANCE, HMENU, HWND,
+    IdIdcStr, IdMenu, IsWindowsVistaOrGreater, MSG, POINT, PostQuitMessage, RECT, RegisterClassEx,
+    SIZE, SetLastError, SetProcessDPIAware, TranslateMessage, WNDCLASSEX, WString, co, msg,
+    prelude::*, seq_ids,
+};
 
 mod settings;
 
@@ -11,7 +16,6 @@ seq_ids! {
 }
 pub struct Window {
     pub hwnd: HWND,
-    // workspaces: Ring<Workspace>,
     state: State,
     settings: Settings,
 }

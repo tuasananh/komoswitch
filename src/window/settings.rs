@@ -2,7 +2,7 @@ use windows::{
     UI::ViewManagement::{UIColorType, UISettings},
     Win32::Graphics::Gdi::{DeleteObject, HGDIOBJ},
 };
-use winsafe::*;
+use winsafe::{COLORREF, HBRUSH, HFONT, HPEN, LOGFONT, co};
 
 pub const TRANSPARENCY_KEY_DARK: COLORREF = COLORREF::from_rgb(0, 0, 0);
 pub const TRANSPARENCY_KEY_LIGHT: COLORREF = COLORREF::from_rgb(255, 255, 255);
@@ -23,7 +23,7 @@ impl ColorSettings {
 
     pub fn is_light_mode(&self) -> bool {
         self.foreground.GetRValue() == 0
-            && self.foreground.GetBValue() == 0
+            && self.foreground.GetGValue() == 0
             && self.foreground.GetBValue() == 0
     }
 
@@ -40,8 +40,8 @@ impl ColorSettings {
         let foreground = ui_settings.GetColorValue(UIColorType::Foreground)?;
         let is_light_mode = foreground.R == 0 && foreground.G == 0 && foreground.B == 0;
         let foreground = match is_light_mode {
-            true => COLORREF::from_rgb(0, 0, 0), 
-            false => COLORREF::from_rgb(255, 255, 255), 
+            true => COLORREF::from_rgb(0, 0, 0),
+            false => COLORREF::from_rgb(255, 255, 255),
         };
         let focused = match is_light_mode {
             true => ui_settings.GetColorValue(UIColorType::AccentDark1)?,
@@ -54,13 +54,13 @@ impl ColorSettings {
         };
 
         let empty = match is_light_mode {
-            true => COLORREF::from_rgb(200, 200, 200), 
-            false => COLORREF::from_rgb(50, 50, 50),  
+            true => COLORREF::from_rgb(200, 200, 200),
+            false => COLORREF::from_rgb(50, 50, 50),
         };
 
         let monocle = match is_light_mode {
             true => COLORREF::from_rgb(255, 135, 210),
-            false => COLORREF::from_rgb(225, 21, 123), 
+            false => COLORREF::from_rgb(225, 21, 123),
         };
 
         let maximized = match is_light_mode {
