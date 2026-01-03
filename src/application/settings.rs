@@ -7,7 +7,7 @@ use winsafe::{COLORREF, HBRUSH, HFONT, HPEN, LOGFONT, co};
 pub const TRANSPARENCY_KEY_DARK: COLORREF = COLORREF::from_rgb(0, 0, 0);
 pub const TRANSPARENCY_KEY_LIGHT: COLORREF = COLORREF::from_rgb(255, 255, 255);
 
-pub struct ColorSettings {
+pub(super) struct ColorSettings {
     pub nonempty: COLORREF,
     pub focused: COLORREF,
     pub empty: COLORREF,
@@ -79,7 +79,7 @@ impl ColorSettings {
     }
 }
 
-pub struct Settings {
+pub(super) struct Settings {
     pub colors: ColorSettings,
     pub font: HFONT,
     pub transparent_brush: HBRUSH,

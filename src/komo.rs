@@ -1,4 +1,5 @@
 use std::io::{BufReader, Read};
+use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
@@ -54,50 +55,56 @@ pub fn start_listen_for_workspaces(hwnd: HWND) -> anyhow::Result<JoinHandle<()>>
 
             // this is when we know a shutdown has been sent
             if matches!(reader.read_to_end(&mut buffer), Ok(0)) {
-                log::info!("Disconnected from komorebi!");
-
-                while komorebi_client::send_message(&SocketMessage::AddSubscriberSocket(
-                    SOCK_NAME.to_string(),
-                ))
-                .is_err()
-                {
-                    log::info!("Attempting to reconnect to komorebi...");
-                    std::thread::sleep(Duration::from_secs(3));
-                }
-
-                log::info!("Reconnected to komorebi!");
+                reconnect();
                 continue;
             }
 
-            let notification_str = match String::from_utf8(buffer) {
-                Ok(notification_str) => notification_str,
-                Err(e) => {
-                    log::error!("Failed to parse komorebi notification string as utf8: {e}");
-                    continue;
-                }
-            };
-
-            let notification = match serde_json::from_str::<Notification>(&notification_str) {
-                Ok(notification) => notification,
-                Err(e) => {
-                    log::error!("Failed to parse komorebi notification string as json: {e}");
-                    continue;
-                }
-            };
-
-            log::info!(
-                "Received notification from komorebi: {:?}",
-                notification.event
-            );
-
-            unsafe {
-                hwnd.PostMessage(UpdateState::to_wmdmsg(notification.state))
-                    .ok();
-            }
-
-            log::debug!("Posted message to update workspaces");
+            process_notification(buffer, &hwnd);
         }
     });
 
     Ok(handle)
+}
+
+fn reconnect() {
+    log::info!("Disconnected from komorebi!");
+
+    while komorebi_client::send_message(&SocketMessage::AddSubscriberSocket(SOCK_NAME.to_string()))
+        .is_err()
+    {
+        log::info!("Attempting to reconnect to komorebi...");
+        std::thread::sleep(Duration::from_secs(3));
+    }
+
+    log::info!("Reconnected to komorebi!");
+}
+
+fn process_notification(buffer: Vec<u8>, hwnd: &HWND) {
+    let notification_str = match String::from_utf8(buffer) {
+        Ok(notification_str) => notification_str,
+        Err(e) => {
+            log::error!("Failed to parse komorebi notification string as utf8: {e}");
+            return;
+        }
+    };
+
+    let notification = match serde_json::from_str::<Notification>(&notification_str) {
+        Ok(notification) => notification,
+        Err(e) => {
+            log::error!("Failed to parse komorebi notification string as json: {e}");
+            return;
+        }
+    };
+
+    log::info!(
+        "Received notification from komorebi: {:?}",
+        notification.event
+    );
+
+    let state = Arc::new(notification.state);
+    unsafe {
+        hwnd.PostMessage(UpdateState::to_wmdmsg(state)).ok();
+    }
+
+    log::debug!("Posted message to update workspaces");
 }
