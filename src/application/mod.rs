@@ -192,7 +192,7 @@ impl Application {
         let taskbars = Self::find_all_taskbars()?;
 
         let monitors = self.state.monitors.clone();
-        for monitor in monitors.elements().iter() {
+        for (monitor_idx, monitor) in monitors.elements().iter().enumerate() {
             log::info!("Monitor found: {:#?}", monitor.id);
             log::info!("Monitor size: {:#?}", monitor.size);
             let Some(taskbar) = taskbars.iter().find(|tb| {
@@ -210,6 +210,7 @@ impl Application {
             self.windows.push(Window {
                 hwnd: HWND::NULL,
                 monitor_id: monitor.id,
+                monitor_idx,
             });
             self.create_window(
                 atom,

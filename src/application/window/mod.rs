@@ -4,6 +4,7 @@ use winsafe::HWND;
 pub struct Window {
     pub hwnd: HWND,
     pub monitor_id: isize,
+    pub monitor_idx: usize
 }
 
 impl Window {

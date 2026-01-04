@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use crate::{
-    application::{Application, settings::Settings},
+    application::{settings::Settings, Application},
     msgs::UpdateState,
 };
 use komorebi_client::{SocketMessage, State};
-use winsafe::{HMENU, HWND, PostQuitMessage, co, msg, prelude::*};
+use winsafe::{co, msg, prelude::*, PostQuitMessage, HMENU, HWND};
 
 const WM_SETTINGCHANGED: co::WM = unsafe { co::WM::from_raw(0x001A) }; // WM_SETTINGCHANGE
 
@@ -74,7 +74,16 @@ impl Application {
         log::info!("Handling WM_LBUTTONDOWN message");
         if let Some(idx) = self.workspace_at_x(hwnd, p.coords.x)? {
             log::info!("Switching to workspace {}", idx);
-            komorebi_client::send_query(&SocketMessage::FocusWorkspaceNumber(idx))?;
+            let monitor_idx = self
+                .windows
+                .iter()
+                .find(|w| w.hwnd == *hwnd)
+                .map(|w| w.monitor_idx)
+                .unwrap();
+            komorebi_client::send_query(&SocketMessage::FocusMonitorWorkspaceNumber(
+                monitor_idx as usize,
+                idx,
+            ))?;
         }
         Ok(0)
     }
