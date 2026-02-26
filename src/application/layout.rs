@@ -32,24 +32,27 @@ impl Application {
 
     pub(super) fn workspace_at_x(&self, hwnd: &HWND, x: i32) -> anyhow::Result<Option<usize>> {
         let hdc = hwnd.GetDC()?;
-        let _old_font = hdc.SelectObject(&self.settings.font)?;
+        let rect = hwnd.GetClientRect()?;
+        let _old_font = hdc.SelectObject(&*self.get_font(rect.bottom - rect.top)?)?;
         let workspaces = self.workspaces(hwnd)?;
         let focused_idx = workspaces.focused_idx();
+        let text_padding = self.get_text_padding(rect.bottom - rect.top);
         let mut left = 0;
 
         for (idx, workspace) in workspaces.elements().iter().enumerate() {
             let workspace_name = workspace.name.clone().unwrap_or((idx + 1).to_string());
             let sz = hdc.GetTextExtentPoint32(&workspace_name)?;
 
-            let h_padding = if focused_idx == idx { 5 } else { 10 };
+            let h_padding = self.get_h_padding(rect.bottom - rect.top, focused_idx == idx);
+
             let rect_left = left + h_padding;
-            let rect_right = left + sz.cx + super::TEXT_PADDING * 2 - h_padding;
+            let rect_right = left + sz.cx + text_padding * 2 - h_padding;
 
             if x >= rect_left && x <= rect_right {
                 return Ok(Some(idx));
             }
 
-            left += sz.cx + super::TEXT_PADDING * 2;
+            left += sz.cx + text_padding * 2;
         }
         Ok(None)
     }

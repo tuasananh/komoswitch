@@ -21,9 +21,6 @@ mod window;
 
 const ID_EXIT: u16 = 1001;
 
-const TEXT_PADDING: i32 = 20; // Padding around text in pixels
-const BORDER_RADIUS: SIZE = SIZE { cx: 10, cy: 10 };
-
 const TASKBAR_CLASS_NAME: &str = "Shell_TrayWnd";
 const TASKBAR_SECONDARY_CLASS_NAME: &str = "Shell_SecondaryTrayWnd";
 
