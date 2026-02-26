@@ -25,6 +25,5 @@ parking_lot = "0.12.4"
 [profile.release]
 codegen-units = 1 # Allows LLVM to perform better optimization.
 lto = true        # Enables link-time-optimizations.
-opt-level = 3   # Prioritizes small binary size.
 panic = "abort"   # Higher performance by disabling panic handlers.
 strip = true      # Ensures debug symbols are removed.
