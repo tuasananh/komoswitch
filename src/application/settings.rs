@@ -2,12 +2,12 @@ use windows::{
     UI::ViewManagement::{UIColorType, UISettings},
     Win32::Graphics::Gdi::{DeleteObject, HGDIOBJ},
 };
-use winsafe::*;
+use winsafe::{COLORREF, HBRUSH, HPEN, co};
 
 pub const TRANSPARENCY_KEY_DARK: COLORREF = COLORREF::from_rgb(0, 0, 0);
 pub const TRANSPARENCY_KEY_LIGHT: COLORREF = COLORREF::from_rgb(255, 255, 255);
 
-pub struct ColorSettings {
+pub(super) struct ColorSettings {
     pub nonempty: COLORREF,
     pub focused: COLORREF,
     pub empty: COLORREF,
@@ -23,7 +23,7 @@ impl ColorSettings {
 
     pub fn is_light_mode(&self) -> bool {
         self.foreground.GetRValue() == 0
-            && self.foreground.GetBValue() == 0
+            && self.foreground.GetGValue() == 0
             && self.foreground.GetBValue() == 0
     }
 
@@ -40,8 +40,8 @@ impl ColorSettings {
         let foreground = ui_settings.GetColorValue(UIColorType::Foreground)?;
         let is_light_mode = foreground.R == 0 && foreground.G == 0 && foreground.B == 0;
         let foreground = match is_light_mode {
-            true => COLORREF::from_rgb(0, 0, 0), 
-            false => COLORREF::from_rgb(255, 255, 255), 
+            true => COLORREF::from_rgb(0, 0, 0),
+            false => COLORREF::from_rgb(255, 255, 255),
         };
         let focused = match is_light_mode {
             true => ui_settings.GetColorValue(UIColorType::AccentDark1)?,
@@ -54,13 +54,13 @@ impl ColorSettings {
         };
 
         let empty = match is_light_mode {
-            true => COLORREF::from_rgb(200, 200, 200), 
-            false => COLORREF::from_rgb(50, 50, 50),  
+            true => COLORREF::from_rgb(200, 200, 200),
+            false => COLORREF::from_rgb(50, 50, 50),
         };
 
         let monocle = match is_light_mode {
             true => COLORREF::from_rgb(255, 135, 210),
-            false => COLORREF::from_rgb(225, 21, 123), 
+            false => COLORREF::from_rgb(225, 21, 123),
         };
 
         let maximized = match is_light_mode {
@@ -79,9 +79,9 @@ impl ColorSettings {
     }
 }
 
-pub struct Settings {
+pub(super) struct Settings {
+    pub font_name: String,
     pub colors: ColorSettings,
-    pub font: HFONT,
     pub transparent_brush: HBRUSH,
     pub transparent_pen: HPEN,
 }
@@ -89,20 +89,16 @@ pub struct Settings {
 impl Settings {
     pub fn new() -> anyhow::Result<Settings> {
         let colors = ColorSettings::new()?;
-        let mut lf = LOGFONT::default();
-        lf.lfHeight = 24;
-        if colors.is_light_mode() {
-            lf.set_lfFaceName("Segoe UI Variable Text Semibold");
-        } else {
-            lf.set_lfFaceName("Segoe UI Variable Text");
-        }
-        let font = HFONT::CreateFontIndirect(&lf)?.leak();
         let transparent_brush = HBRUSH::CreateSolidBrush(colors.get_color_key())?.leak();
         let transparent_pen = HPEN::CreatePen(co::PS::SOLID, 1, colors.get_color_key())?.leak();
 
         Ok(Self {
+            font_name: if colors.is_light_mode() {
+                "Segoe UI Variable Text Semibold".to_string()
+            } else {
+                "Segoe UI Variable Text".to_string()
+            },
             colors,
-            font,
             transparent_brush,
             transparent_pen,
         })
@@ -112,7 +108,6 @@ impl Settings {
 impl Drop for Settings {
     fn drop(&mut self) {
         unsafe {
-            assert!(DeleteObject(HGDIOBJ(self.font.ptr())) != false);
             assert!(DeleteObject(HGDIOBJ(self.transparent_brush.ptr())) != false);
             assert!(DeleteObject(HGDIOBJ(self.transparent_pen.ptr())) != false);
         }

@@ -1,27 +1,31 @@
 #![cfg_attr(
-  all(
-    target_os = "windows",
-    not(debug_assertions),
-  ),
-  windows_subsystem = "windows"
+    all(target_os = "windows", not(debug_assertions),),
+    windows_subsystem = "windows"
 )]
-use crate::{komo::start_listen_for_workspaces, window::Window};
 
+use crate::{application::Application, komo::start_listen_for_workspaces};
+
+mod application;
 mod komo;
-mod window;
 mod msgs;
+mod utils;
 
 fn begin_execution() -> anyhow::Result<()> {
-    let mut window = Window::new()?;
-    window.prepare()?;
+    let mut app = Application::new()?;
+    app.prepare()?;
 
-    let hwnd = unsafe { window.hwnd.raw_copy() };
+    let hwnd = unsafe { app.get_primary_hwnd()?.raw_copy() };
     start_listen_for_workspaces(hwnd)?;
 
-    window.run_loop()
+    app.run_loop()
 }
 
 fn main() -> anyhow::Result<()> {
+    #[cfg(debug_assertions)]
+    {
+        unsafe { std::env::set_var("RUST_LOG", "trace") };
+        unsafe { std::env::set_var("RUST_BACKTRACE", "1") };
+    }
     env_logger::builder()
         .format_timestamp(None)
         .format_file(true)
@@ -29,7 +33,7 @@ fn main() -> anyhow::Result<()> {
         .init();
 
     begin_execution().unwrap_or_else(|err| {
-        println!("{:?}", err.backtrace());
+        println!("{:#?}", err.backtrace());
         log::error!("Application error: {}", err);
     });
 
