@@ -8,21 +8,22 @@ impl Application {
     pub fn get_font(&self, height: i32) -> anyhow::Result<DeleteObjectGuard<HFONT>> {
         let mut lf = LOGFONT::default();
         lf.set_lfFaceName(&self.settings.font_name);
-        lf.lfHeight = height / 3;
+        lf.lfHeight = (height as f32 / 2.4f32) as i32;
+        log::debug!("Font height: {}", lf.lfHeight);
         let font = HFONT::CreateFontIndirect(&lf)?;
         Ok(font)
     }
 
     fn get_bar_height(&self, height: i32) -> i32 {
-        return height / 6;
+        return (height as f64 / 4.4) as i32;
     }
 
     fn get_vertical_padding(&self, height: i32) -> i32 {
-        self.get_bar_height(height)
+        (self.get_bar_height(height) as f64 / 1.4) as i32
     }
 
     pub fn get_text_padding(&self, height: i32) -> i32 {
-        self.get_bar_height(height) * 2
+        (self.get_bar_height(height) as f64 * 1.25) as i32
     }
 
     pub fn get_border_radius(&self, height: i32) -> SIZE {
@@ -34,8 +35,8 @@ impl Application {
     }
 
     pub fn get_h_padding(&self, height: i32, focused: bool) -> i32 {
-        let padding = self.get_bar_height(height) / 2;
-        if focused { padding } else { padding * 2 }
+        let padding = self.get_bar_height(height) / 6;
+        if focused { padding } else { padding * 3 }
     }
 
     pub(super) fn paint_and_get_width(&self, hwnd: &HWND, paint: bool) -> anyhow::Result<i32> {
@@ -68,12 +69,12 @@ impl Application {
             let mut current_state = String::new();
 
             if let Some(hwnd) = komorebi_client::WindowsApi::foreground_window().ok() {
-                if let Some(window) = cw.maximized_window() {
+                if let Some(window) = &cw.maximized_window {
                     if hwnd == window.hwnd {
                         current_state = "Maximized".to_string();
                     }
                 }
-                if let Some(container) = cw.monocle_container() {
+                if let Some(container) = &cw.monocle_container {
                     if container.contains_window(hwnd) {
                         current_state = "Monocle".to_string();
                     }
@@ -203,7 +204,7 @@ impl Application {
                 left: *left,
                 right: *left + sz.cx + text_padding * 2,
                 top: 0,
-                bottom: rect.bottom - vpad - bar_height - vpad / 2,
+                bottom: rect.bottom - vpad - bar_height - vpad / 3,
             };
             hdc.DrawText(
                 &workspace_name,

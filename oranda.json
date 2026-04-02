@@ -1,0 +1,21 @@
+{
+  "project": {
+    "name": "komoswitch",
+    "description": "A lightweight native Windows workspace switcher widget for komorebi that integrates directly into the taskbar",
+    "repository": "https://github.com/tuasananh/komoswitch"
+  },
+  "build": {
+    "static_dir": "assets",
+    "path_prefix": "komoswitch"
+  },
+  "styles": {
+    "theme": "dark"
+  },
+  "components": {
+    "artifacts": {
+      "auto": true
+    },
+    "changelog": true,
+    "funding": false
+  }
+}

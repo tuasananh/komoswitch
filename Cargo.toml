@@ -1,22 +1,31 @@
 [package]
 name = "komoswitch"
 description = "A lightweight native Windows workspace switcher widget for komorebi that integrates directly into the taskbar"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2024"
+repository = "https://github.com/tuasananh/komoswitch"
+authors = ["tuasananh <tuasananh@gmail.com>"]
+
+[package.metadata.wix]
+upgrade-guid = "2E59823E-50A2-4841-9B76-F3C14D2253C1"
+path-guid = "372E3D02-7407-4D77-9636-743D9E67BFEB"
+license = false
+eula = false
 
 
 [dependencies]
 anyhow = "1.0.99"
 env_logger = "0.11.8"
-log = { version="0.4.27", features=["release_max_level_off"] }
+log = { version = "0.4.27", features = ["release_max_level_off"] }
 windows = { version = "0.61.3", features = [
   "Win32_Graphics_Gdi",
   "Win32_System_LibraryLoader",
   "Win32_UI_WindowsAndMessaging",
-  "UI_ViewManagement"
+  "UI_ViewManagement",
+  "Win32_UI_HiDpi",
 ] }
 winsafe = { version = "0.0.25", features = ["user", "gdi"] }
-komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.38"}
+komorebi-client = { git = "https://github.com/LGUG2Z/komorebi", tag = "v0.1.40" }
 serde_json = "1.0.143"
 serde = "1.0.219"
 parking_lot = "0.12.4"
@@ -27,3 +36,8 @@ codegen-units = 1 # Allows LLVM to perform better optimization.
 lto = true        # Enables link-time-optimizations.
 panic = "abort"   # Higher performance by disabling panic handlers.
 strip = true      # Ensures debug symbols are removed.
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
